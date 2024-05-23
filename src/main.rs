@@ -17,8 +17,11 @@ use tokio::net::TcpListener;
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
 use tracing_appender::rolling;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, Layer};
+use utoipa::OpenApi;
+use utoipa_rapidoc::RapiDoc;
+use utoipa_swagger_ui::SwaggerUi;
 
-use crate::router::api_router;
+use crate::{documentation::api_documentation::ApiDoc, router::api_router};
 
 pub mod config;
 pub mod documentation;
@@ -165,6 +168,8 @@ async fn main() -> Result<(), Error> {
         .nest("/api", api_router)
         .route("/", get(routes::index::get_index))
         .fallback(routes::fallback::get_fallback)
+        .merge(SwaggerUi::new("/v1/swagger-ui").url("/v1/openapi.json", ApiDoc::openapi()))
+        .merge(RapiDoc::new("/v1/openapi.json").path("/v1/rapidoc"))
         .layer(DefaultBodyLimit::max(100_000_000))
         .layer(cors_layer)
         .layer(TraceLayer::new_for_http());

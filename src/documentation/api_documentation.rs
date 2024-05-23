@@ -10,7 +10,7 @@ use super::api_security_addon::SecurityAddon;
         description = "The API documentation for the Mountain Backpackers CMS.",
         contact(
             name = "Chairman",
-            url = "chairman@mountainbackpackers.co.za"
+            email = "chairman@mountainbackpackers.co.za"
         ),
         license(
             name = "GPL-3.0"
