@@ -12,6 +12,7 @@ use axum::{
 };
 use bcrypt::hash;
 use config::Config;
+use data::roles::RoleManager;
 use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
 use tokio::net::TcpListener;
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
@@ -23,15 +24,19 @@ use utoipa_swagger_ui::SwaggerUi;
 
 use crate::{documentation::api_documentation::ApiDoc, router::api_router};
 
+pub mod authentication;
 pub mod config;
+pub mod data;
 pub mod documentation;
 pub mod router;
 pub mod routes;
+pub mod utils;
 
 #[derive(Debug, Clone)]
 pub struct AppState {
     pub db: Pool<Postgres>,
     pub config: Config,
+    pub role_manager: RoleManager,
 }
 
 #[tokio::main]
@@ -137,8 +142,8 @@ async fn main() -> Result<(), Error> {
 
             sqlx::query!(
                 r#"
-                    INSERT INTO users (email, password, role)
-                    VALUES ($1, $2, 'System Admin')
+                    INSERT INTO users (email, password)
+                    VALUES ($1, $2)
                 "#,
                 config.admin_email,
                 hashed_password
@@ -154,7 +159,13 @@ async fn main() -> Result<(), Error> {
         }
     }
 
-    let app_state: AppState = AppState { db: pool, config };
+    let role_manager: RoleManager = RoleManager::init().await;
+
+    let app_state: AppState = AppState {
+        db: pool,
+        config,
+        role_manager,
+    };
 
     let api_router: Router = api_router(app_state).await;
 

@@ -6,7 +6,7 @@ CREATE TABLE
         id UUID PRIMARY KEY NOT NULL DEFAULT uuid_generate_v4 (),
         email VARCHAR(255) NOT NULL,
         password VARCHAR(255) NOT NULL,
-        role VARCHAR(255) NOT NULL DEFAULT 'Guest',
+        role UUID NOT NULL DEFAULT uuid_generate_v4 (),
         active BOOLEAN NOT NULL DEFAULT TRUE,
         mfa_enabled BOOLEAN NOT NULL DEFAULT FALSE,
         mfa_verified BOOLEAN NOT NULL DEFAULT FALSE,
