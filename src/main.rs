@@ -1,7 +1,19 @@
+use std::net::SocketAddr;
+
 use anyhow::Error;
+use axum::{
+    extract::DefaultBodyLimit,
+    http::{
+        header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE},
+        HeaderValue, Method,
+    },
+    Router,
+};
 use bcrypt::hash;
 use config::Config;
 use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
+use tokio::net::TcpListener;
+use tower_http::{cors::CorsLayer, trace::TraceLayer};
 use tracing_appender::rolling;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, Layer};
 
@@ -134,6 +146,25 @@ async fn main() -> Result<(), Error> {
     }
 
     let _app_state: AppState = AppState { db: pool, config };
+
+    let cors_layer: CorsLayer = CorsLayer::new()
+        .allow_origin(["http://localhost:3000".parse::<HeaderValue>()?])
+        .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE])
+        .allow_headers([CONTENT_TYPE, AUTHORIZATION, ACCEPT])
+        .allow_credentials(true);
+
+    let router: Router = Router::new()
+        .layer(DefaultBodyLimit::max(100_000_000))
+        .layer(cors_layer)
+        .layer(TraceLayer::new_for_http());
+
+    let address: SocketAddr = SocketAddr::from(([127, 0, 0, 1], 4000));
+
+    let tcp_listener: TcpListener = TcpListener::bind(address).await?;
+
+    tracing::info!("🚀 HTTP Server listening on: http://{}", address);
+
+    axum::serve(tcp_listener, router.into_make_service()).await?;
 
     Ok(())
 }
