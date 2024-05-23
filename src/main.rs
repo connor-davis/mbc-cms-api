@@ -7,6 +7,7 @@ use axum::{
         header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE},
         HeaderValue, Method,
     },
+    routing::get,
     Router,
 };
 use bcrypt::hash;
@@ -17,7 +18,12 @@ use tower_http::{cors::CorsLayer, trace::TraceLayer};
 use tracing_appender::rolling;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, Layer};
 
+use crate::router::api_router;
+
 pub mod config;
+pub mod documentation;
+pub mod router;
+pub mod routes;
 
 #[derive(Debug, Clone)]
 pub struct AppState {
@@ -145,7 +151,9 @@ async fn main() -> Result<(), Error> {
         }
     }
 
-    let _app_state: AppState = AppState { db: pool, config };
+    let app_state: AppState = AppState { db: pool, config };
+
+    let api_router: Router = api_router(app_state).await;
 
     let cors_layer: CorsLayer = CorsLayer::new()
         .allow_origin(["http://localhost:3000".parse::<HeaderValue>()?])
@@ -154,6 +162,9 @@ async fn main() -> Result<(), Error> {
         .allow_credentials(true);
 
     let router: Router = Router::new()
+        .nest("/api", api_router)
+        .route("/", get(routes::index::get_index))
+        .fallback(routes::fallback::get_fallback)
         .layer(DefaultBodyLimit::max(100_000_000))
         .layer(cors_layer)
         .layer(TraceLayer::new_for_http());
